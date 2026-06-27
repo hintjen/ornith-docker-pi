@@ -3,6 +3,7 @@ models/            # GGUF model(s), 20GB+  (scripts/10-download-model.sh)
 build/             # llama.cpp clone+build, Node+pi  (scripts/20, scripts/30)
 venv/              # stray Python venvs (not used by the repo; download is pure curl/wget)
 .venv/
+pi-sessions/       # persisted Pi chat sessions (docker-compose volume)
 *.log
 __pycache__/
 .DS_Store

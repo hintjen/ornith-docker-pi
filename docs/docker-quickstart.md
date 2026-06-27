@@ -72,6 +72,31 @@ To make this permanent, add the project line under `volumes:` in `docker-compose
 
 ---
 
+## Resuming a session
+
+Pi saves each chat as a `.jsonl` under `~/.pi/agent/sessions/`, **bucketed by working
+directory**. Two rules make `--resume` actually find them:
+
+1. **Sessions now persist** outside the container via the `./pi-sessions` volume (see
+   `docker-compose.yml`), so they survive `docker compose down` / rebuilds. *Without that
+   volume they live in the container's writable layer and are wiped on every recreate —
+   that's the usual "no previous sessions found".*
+2. **Resume from the same directory** you started in. Pi only lists sessions for the current
+   cwd, so attach the same way each time (e.g. always `-w /work`, or always plain).
+
+```bash
+docker exec -it ornith pi-ornith --continue          # resume the most recent session
+docker exec -it ornith pi-ornith --resume            # interactive picker
+docker exec -it ornith pi-ornith --session <uuid>    # a specific session (partial UUID ok)
+docker exec -it -w /work ornith pi-ornith --continue # match the cwd you created it in
+```
+
+(`pi-ornith` passes any flags straight through to `pi`, so `--128k --continue` also works.)
+Browse history on the host: `sudo ls pi-sessions/` (files are written by the container as root).
+Note: the **host** `pi` and the **container** `pi` keep separate histories (different `~/.pi`).
+
+---
+
 ## Change context size
 
 Edit `ORNITH_CTX` in `docker-compose.yml` (`65536` = 64K, `131072` = 128K), then:

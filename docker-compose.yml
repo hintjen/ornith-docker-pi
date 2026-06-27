@@ -17,6 +17,9 @@ services:
     volumes:
       # mount the model read-only; override the host dir with $ORNITH_MODEL_DIR
       - ${ORNITH_MODEL_DIR:-./models}:/models:ro
+      # persist Pi chat sessions OUTSIDE the container so `--resume`/`--continue`
+      # survive `docker compose down`/rebuilds (dir is written by the container as root)
+      - ./pi-sessions:/root/.pi/agent/sessions
     environment:
       ORNITH_CTX: 65536      # 131072 for 128K; 262144 needs ORNITH_NCMOE>0
       ORNITH_NCMOE: 0        # 0 = whole model on GPU (fastest)
