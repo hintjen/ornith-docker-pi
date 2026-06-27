@@ -1,0 +1,30 @@
+{
+  "providers": {
+    "ornith-local": {
+      "baseUrl": "http://localhost:8090/v1",
+      "api": "openai-completions",
+      "apiKey": "local",
+      "compat": {
+        "supportsDeveloperRole": false
+      },
+      "models": [
+        {
+          "id": "ornith",
+          "name": "Ornith-1.0-35B (local RTX 4090, 64K)",
+          "contextWindow": 65536,
+          "maxTokens": 16384,
+          "reasoning": true,
+          "input": ["text"]
+        },
+        {
+          "id": "ornith-128k",
+          "name": "Ornith-1.0-35B (local RTX 4090, 128K)",
+          "contextWindow": 131072,
+          "maxTokens": 16384,
+          "reasoning": true,
+          "input": ["text"]
+        }
+      ]
+    }
+  }
+}

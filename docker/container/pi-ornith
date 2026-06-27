@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# In-container Pi launcher. The container's main process already serves :8090,
+# so this normally just attaches Pi; standalone it starts a server first.
+#   docker exec -it ornith pi-ornith            # 64K interactive
+#   docker exec -it ornith pi-ornith --128k     # 128K
+#   docker exec ornith pi-ornith -p "..."       # headless
+export PATH="/opt/ornith/node/bin:/opt/ornith:$PATH"
+
+CTX=65536
+MODEL=ornith-local/ornith
+if [ "$1" = "--128k" ]; then CTX=131072; MODEL=ornith-local/ornith-128k; shift; fi
+
+if ! curl -sf http://localhost:8090/health >/dev/null 2>&1; then
+  echo "[pi-ornith] no server on :8090 — starting one at ${CTX} ctx..." >&2
+  ORNITH_CTX=$CTX nohup /opt/ornith/serve.sh >/tmp/ornith-server.log 2>&1 &
+  for i in $(seq 1 90); do curl -sf http://localhost:8090/health >/dev/null 2>&1 && break; sleep 2; done
+fi
+
+exec pi --model "$MODEL" "$@"

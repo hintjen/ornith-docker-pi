@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Launch the Pi coding agent against the local Ornith server; auto-starts it if needed.
+#
+#   ./scripts/pi-ornith               # 64K interactive
+#   ./scripts/pi-ornith --128k        # 128K context
+#   ./scripts/pi-ornith -p "..."      # headless; any pi args pass through
+#
+# Env override: ORNITH_NODE_DIR
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+export PATH="${ORNITH_NODE_DIR:-$HERE/build/node}/bin:$PATH"
+
+CTX=65536
+MODEL=ornith-local/ornith
+if [ "$1" = "--128k" ]; then CTX=131072; MODEL=ornith-local/ornith-128k; shift; fi
+
+if ! curl -sf http://localhost:8090/health >/dev/null 2>&1; then
+  echo "[pi-ornith] starting server at ${CTX} ctx..." >&2
+  ORNITH_CTX="$CTX" nohup "$HERE/scripts/serve-ornith.sh" "$CTX" >/tmp/ornith-server.log 2>&1 &
+  for i in $(seq 1 90); do curl -sf http://localhost:8090/health >/dev/null 2>&1 && break; sleep 2; done
+fi
+
+exec pi --model "$MODEL" "$@"

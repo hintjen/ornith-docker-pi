@@ -1,0 +1,78 @@
+# Ornith-1.0-35B coding-agent stack — built from source, GPU passthrough.
+# Build context is the REPO ROOT:
+#   docker build -f docker/Dockerfile.source -t ornith:src .
+#   docker run -d --gpus all -p 8090:8090 -v "$PWD/models:/models:ro" ornith:src
+#
+# Multi-stage: a CUDA *devel* image compiles llama.cpp; a slim *runtime* image
+# copies only the binaries and adds Node + Pi. The model is mounted at /models.
+
+# ============================== builder ==============================
+FROM nvidia/cuda:12.3.2-devel-ubuntu22.04 AS builder
+
+# CUDA_ARCH: 89 = Ada / RTX 4090. Use 86=Ampere, 90=Hopper, etc.
+ARG LLAMA_COMMIT=050ee92d04c2e1f639025786dea701c70e7d4204
+ARG CUDA_ARCH=89
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git cmake ninja-build build-essential ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+RUN git clone https://github.com/ggml-org/llama.cpp src \
+    && cd src && git checkout ${LLAMA_COMMIT}
+
+# The build container has no GPU/driver, so the real libcuda.so.1 is absent. Expose the
+# CUDA driver *stub* under its SONAME for link-time symbol resolution. (At run time the real
+# driver is injected by nvidia-container-toolkit; this stub is never used at run time.)
+RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/lib/x86_64-linux-gnu/libcuda.so.1 \
+    && ldconfig
+
+RUN cd src && cmake -S . -B build -G Ninja \
+        -DGGML_CUDA=ON \
+        -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH} \
+        -DGGML_CUDA_FA_ALL_QUANTS=ON \
+        -DLLAMA_CURL=OFF \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_NATIVE=ON \
+    && cmake --build build -j --target llama-server llama-cli llama-bench
+
+# ============================== runtime ==============================
+FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04
+
+ARG NODE_VERSION=v22.14.0
+ARG PI_VERSION=0.73.1
+
+ENV NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility \
+    LD_LIBRARY_PATH=/opt/ornith/bin:/usr/local/cuda/lib64 \
+    PATH=/opt/ornith/node/bin:/opt/ornith:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    HOME=/root \
+    ORNITH_CTX=65536 \
+    ORNITH_NCMOE=0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgomp1 curl ca-certificates xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node (official tarball) + Pi coding agent (pinned).
+RUN curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz" \
+        -o /tmp/node.tar.xz \
+    && mkdir -p /opt/ornith/node \
+    && tar xf /tmp/node.tar.xz -C /opt/ornith/node --strip-components=1 \
+    && rm /tmp/node.tar.xz \
+    && /opt/ornith/node/bin/npm install -g "@mariozechner/pi-coding-agent@${PI_VERSION}"
+
+# Compiled llama.cpp binaries from the builder stage.
+COPY --from=builder /build/src/build/bin/ /opt/ornith/bin/
+
+# Launchers + Pi config (paths relative to repo root build context).
+COPY docker/container/serve.sh  /opt/ornith/serve.sh
+COPY docker/container/pi-ornith /opt/ornith/pi-ornith
+COPY config/pi-models.json      /root/.pi/agent/models.json
+RUN chmod +x /opt/ornith/serve.sh /opt/ornith/pi-ornith
+
+EXPOSE 8090
+HEALTHCHECK --interval=30s --timeout=5s --start-period=240s --retries=3 \
+    CMD curl -sf http://localhost:8090/health || exit 1
+
+CMD ["/opt/ornith/serve.sh"]

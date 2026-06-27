@@ -1,0 +1,30 @@
+# One-command run for the Ornith coding-agent server (build from source, GPU passthrough).
+#   docker compose up -d --build       # build image + start
+#   docker compose logs -f             # watch model load (~18s)
+#   docker exec -it ornith pi-ornith   # attach the Pi agent (--128k for 128K)
+#   docker compose down                # stop
+#
+# Download the model first:  ./scripts/10-download-model.sh   (-> ./models)
+services:
+  ornith:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.source
+    image: ornith:src
+    container_name: ornith
+    ports:
+      - "8090:8090"
+    volumes:
+      # mount the model read-only; override the host dir with $ORNITH_MODEL_DIR
+      - ${ORNITH_MODEL_DIR:-./models}:/models:ro
+    environment:
+      ORNITH_CTX: 65536      # 131072 for 128K; 262144 needs ORNITH_NCMOE>0
+      ORNITH_NCMOE: 0        # 0 = whole model on GPU (fastest)
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

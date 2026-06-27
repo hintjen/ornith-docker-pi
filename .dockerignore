@@ -1,0 +1,6 @@
+# keep the build context small; the model is a runtime volume, not an image layer
+.git
+models/
+build/
+docs/
+*.log
