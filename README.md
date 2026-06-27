@@ -48,6 +48,9 @@ curl http://localhost:8090/v1/chat/completions -d '{"messages":[{"role":"user","
 docker exec -it ornith pi-ornith          # Pi coding agent (add --128k for 128K context)
 ```
 
+Day-to-day commands (start/stop/restart/logs, mounting your code) — see
+**[docs/docker-quickstart.md](docs/docker-quickstart.md)**.
+
 ## Quick start (bare metal)
 
 Requires NVIDIA driver + **CUDA toolkit (nvcc)**.
@@ -85,8 +88,9 @@ Requires NVIDIA driver + **CUDA toolkit (nvcc)**.
 ├── config/
 │   └── pi-models.json            # Pi model config (ornith 64K + ornith-128k)
 └── docs/
+    ├── docker-quickstart.md      # start/stop/daily Docker ops
     ├── baremetal-setup.md        # detailed as-built build + benchmark writeup
-    └── docker-setup.md           # detailed Docker writeup
+    └── docker-setup.md           # detailed Docker writeup (build internals)
 ```
 
 `models/` and `build/` are created by the scripts and git-ignored.
