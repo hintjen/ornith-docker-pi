@@ -23,9 +23,28 @@ if ! { [ -d "$DEST" ] && touch "$DEST/.write_test" 2>/dev/null; }; then
   exit 1
 fi
 rm -f "$DEST/.write_test"
-command -v hf >/dev/null 2>&1 || { echo "[download] installing huggingface_hub..."; python3 -m pip install -U huggingface_hub >/dev/null; }
+# Resolve an 'hf' CLI WITHOUT touching system packages. On Debian 12+/Ubuntu 23.04+
+# (PEP 668 "externally-managed-environment"), `pip install` into system Python errors out
+# unless you pass --break-system-packages. Use a self-contained repo-local venv instead.
+HF="$(command -v hf || true)"
+if [ -z "$HF" ]; then
+  VENV="${ORNITH_VENV:-$HERE/build/venv}"
+  if [ ! -x "$VENV/bin/hf" ]; then
+    echo "[download] no 'hf' on PATH; creating venv at $VENV ..."
+    python3 -m venv "$VENV" 2>/dev/null || {
+      echo "[download] ERROR: 'python3 -m venv' failed — install the venv module first:" >&2
+      echo "[download]   Debian/Ubuntu:  sudo apt-get install -y python3-venv" >&2
+      exit 1; }
+    "$VENV/bin/pip" install -q -U pip huggingface_hub
+  fi
+  HF="$VENV/bin/hf"
+fi
+echo "[download] using hf: $HF"
 
-hf download "$REPO" --include "*${QUANT}*.gguf" --local-dir "$DEST"
+# Faster downloads if hf_transfer is present (optional).
+export HF_HUB_ENABLE_HF_TRANSFER="${HF_HUB_ENABLE_HF_TRANSFER:-0}"
+
+"$HF" download "$REPO" --include "*${QUANT}*.gguf" --local-dir "$DEST"
 
 FILE="$(ls -1 "$DEST"/*"${QUANT}"*.gguf 2>/dev/null | head -1 || true)"
 [ -n "$FILE" ] || { echo "[download] ERROR: no *${QUANT}*.gguf in $DEST" >&2; exit 1; }
