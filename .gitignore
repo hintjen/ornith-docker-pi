@@ -1,7 +1,7 @@
 # regenerated / bulky artifacts — never committed
 models/            # GGUF model(s), 20GB+  (scripts/10-download-model.sh)
-build/             # llama.cpp clone+build, Node+pi, hf venv  (scripts/20, scripts/30, 10)
-venv/              # stray Python venvs (download script auto-creates build/venv)
+build/             # llama.cpp clone+build, Node+pi  (scripts/20, scripts/30)
+venv/              # stray Python venvs (not used by the repo; download is pure curl/wget)
 .venv/
 *.log
 __pycache__/

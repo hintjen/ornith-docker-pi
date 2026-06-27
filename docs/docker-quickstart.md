@@ -112,7 +112,7 @@ docker rmi ornith:src                 # remove the image
 | Container exits / unhealthy on start | `docker compose logs ornith`; usually OOM — lower `ORNITH_CTX` or raise `ORNITH_NCMOE` |
 | `bind: address already in use` (8090) | another server is up — `docker compose down`, or publish elsewhere: `-p 8091:8090` |
 | Pi answer comes back empty | reasoning model — it's still "thinking"; allow more output (already configured) |
-| `pip … externally-managed-environment` on download | the script now installs `hf` into a repo-local venv (`build/venv`) instead of system Python; if venv creation fails: `sudo apt-get install -y python3-venv` |
+| Download interrupted / slow | it's pure `curl`/`wget` (no Python) and **resumable** — just re-run `./scripts/10-download-model.sh`. Needs `curl` or `wget` installed |
 | `nvidia-smi` fine on host, fails in container | start with `--gpus all` (compose handles this via `deploy.resources`) |
 
 ---

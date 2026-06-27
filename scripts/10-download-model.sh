@@ -1,51 +1,57 @@
 #!/usr/bin/env bash
-# Download an Ornith-1.0-35B GGUF quant from Hugging Face into the repo's models/ dir.
+# Download an Ornith-1.0-35B GGUF quant straight from Hugging Face with curl/wget.
+# No Python, no huggingface_hub, no venv — the files are public over plain HTTPS.
 #
 #   ./scripts/10-download-model.sh [QUANT] [DEST_DIR]
 #
 #   QUANT     Q4_K_M (default) | Q5_K_M | Q6_K | Q8_0 | bf16
 #   DEST_DIR  default: <repo>/models  (override with $ORNITH_MODEL_DIR)
+#
+# The download resumes if interrupted — just re-run the same command.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
 REPO="deepreinforce-ai/Ornith-1.0-35B-GGUF"
 QUANT="${1:-Q4_K_M}"
 DEST="${2:-${ORNITH_MODEL_DIR:-$HERE/models}}"
+FILE="ornith-1.0-35b-${QUANT}.gguf"
+URL="https://huggingface.co/${REPO}/resolve/main/${FILE}"
+OUT="$DEST/$FILE"
 
-echo "[download] repo=$REPO quant=$QUANT dest=$DEST"
+echo "[download] $FILE -> $DEST"
 mkdir -p "$DEST" 2>/dev/null || true
 # Guard against a root-owned models/ (Docker creates the bind-mount dir as root if you
-# 'docker compose up' before downloading). hf would then fail deep inside with EACCES.
+# 'docker compose up' before downloading) — writes would fail with EACCES otherwise.
 if ! { [ -d "$DEST" ] && touch "$DEST/.write_test" 2>/dev/null; }; then
   echo "[download] ERROR: $DEST is not writable by $(id -un)." >&2
-  echo "[download]   Likely root-owned because 'docker compose up' created it first." >&2
   echo "[download]   Fix:  sudo chown -R \"$(id -un):$(id -gn)\" \"$DEST\"" >&2
   exit 1
 fi
 rm -f "$DEST/.write_test"
-# Resolve an 'hf' CLI WITHOUT touching system packages. On Debian 12+/Ubuntu 23.04+
-# (PEP 668 "externally-managed-environment"), `pip install` into system Python errors out
-# unless you pass --break-system-packages. Use a self-contained repo-local venv instead.
-HF="$(command -v hf || true)"
-if [ -z "$HF" ]; then
-  VENV="${ORNITH_VENV:-$HERE/build/venv}"
-  if [ ! -x "$VENV/bin/hf" ]; then
-    echo "[download] no 'hf' on PATH; creating venv at $VENV ..."
-    python3 -m venv "$VENV" 2>/dev/null || {
-      echo "[download] ERROR: 'python3 -m venv' failed — install the venv module first:" >&2
-      echo "[download]   Debian/Ubuntu:  sudo apt-get install -y python3-venv" >&2
-      exit 1; }
-    "$VENV/bin/pip" install -q -U pip huggingface_hub
-  fi
-  HF="$VENV/bin/hf"
+
+# Remote size: follow the redirect to the CDN and read the final Content-Length.
+EXPECT="$(curl -sIL "$URL" | awk 'tolower($0) ~ /^content-length:/ {n=$2} END{gsub(/\r/,"",n); print n}')" || true
+[ -n "${EXPECT:-}" ] && echo "[download] remote size: $EXPECT bytes"
+
+# Skip if already fully downloaded.
+if [ -f "$OUT" ] && [ -n "${EXPECT:-}" ] && [ "$(stat -c %s "$OUT")" = "$EXPECT" ]; then
+  echo "[download] already complete: $OUT"
+  exit 0
 fi
-echo "[download] using hf: $HF"
 
-# Faster downloads if hf_transfer is present (optional).
-export HF_HUB_ENABLE_HF_TRANSFER="${HF_HUB_ENABLE_HF_TRANSFER:-0}"
+echo "[download] fetching (resumable)..."
+if command -v curl >/dev/null 2>&1; then
+  curl -L --fail --retry 5 --retry-delay 5 -C - -o "$OUT" "$URL"
+elif command -v wget >/dev/null 2>&1; then
+  wget -c -P "$DEST" "$URL"
+else
+  echo "[download] ERROR: need 'curl' or 'wget' installed" >&2
+  exit 1
+fi
 
-"$HF" download "$REPO" --include "*${QUANT}*.gguf" --local-dir "$DEST"
-
-FILE="$(ls -1 "$DEST"/*"${QUANT}"*.gguf 2>/dev/null | head -1 || true)"
-[ -n "$FILE" ] || { echo "[download] ERROR: no *${QUANT}*.gguf in $DEST" >&2; exit 1; }
-echo "[download] done: $FILE ($(stat -c %s "$FILE") bytes)"
+GOT="$(stat -c %s "$OUT" 2>/dev/null || echo 0)"
+if [ -n "${EXPECT:-}" ] && [ "$EXPECT" != "$GOT" ]; then
+  echo "[download] WARNING: size mismatch (expected $EXPECT, got $GOT) — re-run to resume/repair." >&2
+  exit 1
+fi
+echo "[download] done: $OUT ($GOT bytes)"
