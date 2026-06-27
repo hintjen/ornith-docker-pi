@@ -14,6 +14,11 @@ docker compose up -d --build          # build image + start server (first build 
 docker compose logs -f                # wait for "server is listening" (~18s), then Ctrl-C
 ```
 
+> **Order matters:** download the model **before** `docker compose up`. Compose mounts `./models`,
+> and if it doesn't exist yet Docker creates it **root-owned**, which then breaks the (non-root)
+> download with `Permission denied: …/models/.cache`. If that happened:
+> `sudo chown -R "$USER:$USER" models` and re-run the download.
+
 The OpenAI-compatible API is now on `http://localhost:8090`.
 
 ---
