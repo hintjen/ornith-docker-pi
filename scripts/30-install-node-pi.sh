@@ -8,7 +8,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
-NODE_VERSION="${NODE_VERSION:-v22.14.0}"
+NODE_VERSION="${NODE_VERSION:-v24.18.0}"
 PI_VERSION="${PI_VERSION:-0.73.1}"
 PREFIX="${ORNITH_NODE_DIR:-$HERE/build/node}"
 

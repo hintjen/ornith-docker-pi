@@ -163,7 +163,7 @@ docker exec ornith nvidia-smi --query-gpu=name,memory.used --format=csv,noheader
 | Base images | `nvidia/cuda:12.3.2-{devel,runtime}-ubuntu22.04` |
 | llama.cpp | commit `050ee92d04c2e1f639025786dea701c70e7d4204` |
 | CUDA arch | `89` (Ada / RTX 4090) |
-| Node / Pi | `v22.14.0` / `@mariozechner/pi-coding-agent@0.73.1` |
+| Node / Pi | `v24.18.0` (LTS) / `@mariozechner/pi-coding-agent@0.73.1` |
 | NVIDIA Container Toolkit | `1.19.1` |
 | Host driver | `550.144.03` |
 | Model | `ornith-1.0-35b-Q4_K_M.gguf` (21,166,757,760 bytes) |

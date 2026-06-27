@@ -39,7 +39,7 @@ RUN cd src && cmake -S . -B build -G Ninja \
 # ============================== runtime ==============================
 FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04
 
-ARG NODE_VERSION=v22.14.0
+ARG NODE_VERSION=v24.18.0
 ARG PI_VERSION=0.73.1
 
 ENV NVIDIA_VISIBLE_DEVICES=all \
