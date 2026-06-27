@@ -107,7 +107,7 @@ Env vars (set in `docker-compose.yml`, or `-e`/export for the host scripts):
 | `ORNITH_NCMOE` | `0` | expert layers kept on CPU. `0` = whole model on GPU (fastest) |
 | `ORNITH_MODEL_DIR` | `./models` | host dir holding the GGUF (mounted at `/models`) |
 | `LLAMA_COMMIT` / `CUDA_ARCH` | pinned / `89` | build-time pins (`CUDA_ARCH` 86=Ampere, 89=Ada, 90=Hopper) |
-| `NODE_VERSION` / `PI_VERSION` | `v24.18.0` / `0.73.1` | Node + Pi versions |
+| `NODE_VERSION` / `PI_VERSION` | `v24.18.0` / `0.80.2` | Node + Pi versions |
 
 **Notes**
 - Ornith is a *reasoning* model: chain-of-thought goes to the API `reasoning_content` field, the
@@ -126,7 +126,7 @@ Env vars (set in `docker-compose.yml`, or `-e`/export for the host scripts):
 | CUDA toolkit (bare metal) | 12.3 (nvcc V12.3.103) |
 | NVIDIA driver | 550.144.03 · RTX 4090 (sm_89) |
 | NVIDIA Container Toolkit | 1.19.1 |
-| Node / Pi | v24.18.0 (LTS) / `@mariozechner/pi-coding-agent@0.73.1` |
+| Node / Pi | v24.18.0 (LTS) / `@earendil-works/pi-coding-agent@0.80.2` |
 | Model | `ornith-1.0-35b-Q4_K_M.gguf` (21,166,757,760 bytes) |
 
 See `docs/` for the full step-by-step writeups, including every gotcha hit during the original

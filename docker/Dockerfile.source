@@ -40,7 +40,7 @@ RUN cd src && cmake -S . -B build -G Ninja \
 FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04
 
 ARG NODE_VERSION=v24.18.0
-ARG PI_VERSION=0.73.1
+ARG PI_VERSION=0.80.2
 
 ENV NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility \
@@ -60,7 +60,7 @@ RUN curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-lin
     && mkdir -p /opt/ornith/node \
     && tar xf /tmp/node.tar.xz -C /opt/ornith/node --strip-components=1 \
     && rm /tmp/node.tar.xz \
-    && /opt/ornith/node/bin/npm install -g "@mariozechner/pi-coding-agent@${PI_VERSION}"
+    && /opt/ornith/node/bin/npm install -g "@earendil-works/pi-coding-agent@${PI_VERSION}"
 
 # Compiled llama.cpp binaries from the builder stage.
 COPY --from=builder /build/src/build/bin/ /opt/ornith/bin/

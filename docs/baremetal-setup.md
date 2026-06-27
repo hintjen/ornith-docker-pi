@@ -215,9 +215,13 @@ Run directly: `./serve-ornith.sh` (64K) or `./serve-ornith.sh 131072` (128K).
 
 ## 7. Wire up the Pi coding agent
 
-[Pi](https://github.com/earendil-works/pi) (`@mariozechner/pi-coding-agent`) is a BYOK CLI
-agent that speaks the OpenAI chat-completions protocol — so our `llama-server` is a drop-in
-backend.
+[Pi](https://github.com/earendil-works/pi) is a BYOK CLI agent that speaks the OpenAI
+chat-completions protocol — so our `llama-server` is a drop-in backend.
+
+> **Package moved:** this original build used `@mariozechner/pi-coding-agent` (frozen at
+> 0.73.1). Active development is now **`@earendil-works/pi-coding-agent`** (0.80.2+, needs
+> Node 22+). The reproducible scripts/Dockerfile use the new package; the commands below are
+> the historical as-built record.
 
 ### 7a. Install Node + Pi
 

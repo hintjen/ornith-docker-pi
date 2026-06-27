@@ -62,7 +62,7 @@ Or without compose:
 docker build -f docker/Dockerfile.source -t ornith:src .
 docker run -d --name ornith --gpus all -p 8090:8090 \
   -v "$PWD/models:/models:ro" ornith:src
-# override pins:  --build-arg LLAMA_COMMIT=<sha>  --build-arg CUDA_ARCH=86  --build-arg PI_VERSION=0.73.1
+# override pins:  --build-arg LLAMA_COMMIT=<sha>  --build-arg CUDA_ARCH=86  --build-arg PI_VERSION=0.80.2
 ```
 
 `Dockerfile.source` is multi-stage: a `cuda:12.3.2-devel-ubuntu22.04` **builder** compiles
@@ -163,7 +163,7 @@ docker exec ornith nvidia-smi --query-gpu=name,memory.used --format=csv,noheader
 | Base images | `nvidia/cuda:12.3.2-{devel,runtime}-ubuntu22.04` |
 | llama.cpp | commit `050ee92d04c2e1f639025786dea701c70e7d4204` |
 | CUDA arch | `89` (Ada / RTX 4090) |
-| Node / Pi | `v24.18.0` (LTS) / `@mariozechner/pi-coding-agent@0.73.1` |
+| Node / Pi | `v24.18.0` (LTS) / `@earendil-works/pi-coding-agent@0.80.2` |
 | NVIDIA Container Toolkit | `1.19.1` |
 | Host driver | `550.144.03` |
 | Model | `ornith-1.0-35b-Q4_K_M.gguf` (21,166,757,760 bytes) |

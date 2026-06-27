@@ -9,7 +9,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
 NODE_VERSION="${NODE_VERSION:-v24.18.0}"
-PI_VERSION="${PI_VERSION:-0.73.1}"
+PI_VERSION="${PI_VERSION:-0.80.2}"
 PREFIX="${ORNITH_NODE_DIR:-$HERE/build/node}"
 
 mkdir -p "$PREFIX"
@@ -19,5 +19,5 @@ tar xf /tmp/ornith-node.tar.xz -C "$PREFIX" --strip-components=1
 rm -f /tmp/ornith-node.tar.xz
 
 echo "[node] installing pi-coding-agent@$PI_VERSION..."
-"$PREFIX/bin/npm" install -g "@mariozechner/pi-coding-agent@${PI_VERSION}"
+"$PREFIX/bin/npm" install -g "@earendil-works/pi-coding-agent@${PI_VERSION}"
 echo "[node] done. add to PATH:  export PATH=\"$PREFIX/bin:\$PATH\""
