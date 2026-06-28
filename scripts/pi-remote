@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Spin up a Pi session against a REMOTE Ornith/llama-server. Does NOT start a local server,
+# and needs NO model / GPU / llama.cpp build locally — only Node+pi (scripts/30-install-node-pi.sh).
+#
+#   ./scripts/pi-remote <host[:port] | url> [--128k] [pi args...]
+#   ./scripts/pi-remote gpu-box                       # http://gpu-box:8090
+#   ./scripts/pi-remote gpu-box:9001 --continue
+#   ./scripts/pi-remote http://10.0.0.5:8090 -p "fix the test"
+#   ORNITH_SERVER_URL=gpu-box ./scripts/pi-remote      # via env instead of arg
+#
+# The Ornith server must listen on 0.0.0.0 (our serve scripts do) and its port must be
+# reachable. For an untrusted network, prefer an SSH tunnel and point at localhost:
+#   ssh -N -L 8090:localhost:8090 user@gpu-box   # then: ./scripts/pi-remote localhost
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+export PATH="${ORNITH_NODE_DIR:-$HERE/build/node}/bin:$PATH"
+
+command -v pi >/dev/null 2>&1 || { echo "ERROR: 'pi' not found — run scripts/30-install-node-pi.sh" >&2; exit 1; }
+
+# 1) server target: first non-flag arg, else $ORNITH_SERVER_URL
+if [ -n "${1:-}" ] && [ "${1#-}" = "${1}" ]; then ORNITH_SERVER_URL="$1"; shift; fi
+[ -n "${ORNITH_SERVER_URL:-}" ] || {
+  echo "usage: pi-remote <host[:port]|url> [--128k] [pi args]   (or set ORNITH_SERVER_URL)" >&2; exit 1; }
+export ORNITH_SERVER_URL
+
+# 2) write Pi config pointing at the remote (40-configure-pi.sh normalizes the URL)
+BASE="$("$HERE/scripts/40-configure-pi.sh" | sed -n 's/.*-> \(http[^ )]*\).*/\1/p')"
+
+# 3) quick reachability check (warn only)
+if curl -sf --connect-timeout 3 --max-time 5 "${BASE%/v1}/health" >/dev/null 2>&1; then
+  echo "[pi-remote] server reachable: $BASE" >&2
+else
+  echo "[pi-remote] WARNING: ${BASE%/v1}/health not reachable — check host/port/firewall (or use an SSH tunnel)" >&2
+fi
+
+# 4) model size flag
+MODEL=ornith-local/ornith
+[ "${1:-}" = "--128k" ] && { MODEL=ornith-local/ornith-128k; shift; }
+
+exec pi --model "$MODEL" "$@"

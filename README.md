@@ -64,6 +64,29 @@ Requires NVIDIA driver + **CUDA toolkit (nvcc)**.
 ./scripts/pi-ornith                       # Pi agent (--128k for 128K)
 ```
 
+## Connect from another machine (remote server)
+
+The Ornith server already listens on `0.0.0.0:8090`, so Pi can run on a **different box** with
+no model, GPU, or llama.cpp build — just Node + Pi:
+
+```bash
+# on the client machine (one-time): install Node + Pi only
+./scripts/30-install-node-pi.sh
+
+# talk to the remote server (host / host:port / full url):
+./scripts/pi-remote gpu-box                  # interactive, http://gpu-box:8090
+./scripts/pi-remote gpu-box --128k --continue
+./scripts/pi-remote http://10.0.0.5:8090 -p "fix the failing test"
+```
+
+`pi-remote` never starts a local server — it just points Pi at the remote one (writing
+`~/.pi/agent/models.json` for you) and health-checks it first. The endpoint is **unauthenticated**,
+so keep it on a trusted network or tunnel over SSH:
+
+```bash
+ssh -N -L 8090:localhost:8090 user@gpu-box   # then: ./scripts/pi-remote localhost
+```
+
 ---
 
 ## Repo layout
@@ -79,7 +102,8 @@ Requires NVIDIA driver + **CUDA toolkit (nvcc)**.
 │   ├── 30-install-node-pi.sh     # Node tarball + pi-coding-agent
 │   ├── 40-configure-pi.sh        # install Pi model config
 │   ├── serve-ornith.sh           # run llama-server (host)
-│   └── pi-ornith                 # run Pi against the local server (host)
+│   ├── pi-ornith                 # run Pi against the local server (host)
+│   └── pi-remote                 # run Pi against a REMOTE server (client-only)
 ├── docker/
 │   ├── Dockerfile.source         # multi-stage: compile llama.cpp + install Pi
 │   └── container/
@@ -107,6 +131,7 @@ Env vars (set in `docker-compose.yml`, or `-e`/export for the host scripts):
 | `ORNITH_NCMOE` | `0` | expert layers kept on CPU. `0` = whole model on GPU (fastest) |
 | `ORNITH_PARALLEL` | `1` | concurrent request slots. >1 lets multiple Pi sessions run at once; `ORNITH_CTX` splits across slots (per-client = CTX/PARALLEL) |
 | `ORNITH_MODEL_DIR` | `./models` | host dir holding the GGUF (mounted at `/models`) |
+| `ORNITH_SERVER_URL` | `http://localhost:8090` | server the Pi client points at — `host`, `host:port`, or full url (used by `40-configure-pi.sh` / `pi-remote`) |
 | `LLAMA_COMMIT` / `CUDA_ARCH` | pinned / `89` | build-time pins (`CUDA_ARCH` 86=Ampere, 89=Ada, 90=Hopper) |
 | `NODE_VERSION` / `PI_VERSION` | `v24.18.0` / `0.80.2` | Node + Pi versions |
 
