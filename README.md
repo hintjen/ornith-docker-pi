@@ -105,6 +105,7 @@ Env vars (set in `docker-compose.yml`, or `-e`/export for the host scripts):
 |---|---|---|
 | `ORNITH_CTX` | `65536` | context window. 65536≈22 GB · 131072≈23.4 GB · 262144 needs `ORNITH_NCMOE>0` |
 | `ORNITH_NCMOE` | `0` | expert layers kept on CPU. `0` = whole model on GPU (fastest) |
+| `ORNITH_PARALLEL` | `1` | concurrent request slots. >1 lets multiple Pi sessions run at once; `ORNITH_CTX` splits across slots (per-client = CTX/PARALLEL) |
 | `ORNITH_MODEL_DIR` | `./models` | host dir holding the GGUF (mounted at `/models`) |
 | `LLAMA_COMMIT` / `CUDA_ARCH` | pinned / `89` | build-time pins (`CUDA_ARCH` 86=Ampere, 89=Ada, 90=Hopper) |
 | `NODE_VERSION` / `PI_VERSION` | `v24.18.0` / `0.80.2` | Node + Pi versions |

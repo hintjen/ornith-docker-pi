@@ -100,6 +100,7 @@ Set in `docker-compose.yml`, or `-e` on `docker run`:
 |---|---|---|
 | `ORNITH_CTX` | `65536` | context window. 65536 ≈ 22 GB · 131072 ≈ 23.4 GB · 262144 needs `ORNITH_NCMOE>0` |
 | `ORNITH_NCMOE` | `0` | expert layers kept on CPU. `0` = whole model on GPU (fastest); raise to free VRAM |
+| `ORNITH_PARALLEL` | `1` | concurrent request slots for multiple Pi clients; `ORNITH_CTX` splits across slots (per-client = CTX/PARALLEL) |
 | `ORNITH_MODEL` | `/models/ornith-1.0-35b-Q4_K_M.gguf` | model path inside the container |
 
 Measured on the reference 4090 (Q4_K_M, full offload): ~22 GB VRAM @ 64K, **~198 tok/s gen**

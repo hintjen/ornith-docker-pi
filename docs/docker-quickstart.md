@@ -55,6 +55,11 @@ docker exec -it ornith pi-ornith --128k     # 128K context
 docker exec ornith pi-ornith -p "explain the failing test"
 ```
 
+**Multiple Pi sessions at once:** the server handles one request at a time by default, so
+concurrent clients queue. To run them truly in parallel, set `ORNITH_PARALLEL` (slots) and size
+`ORNITH_CTX` for all of them — `ORNITH_CTX` is split across slots (per-client = CTX/PARALLEL).
+E.g. two clients at 64K each: `ORNITH_PARALLEL=2`, `ORNITH_CTX=131072` (~22.5 GB, fits).
+
 ### Work on your own code
 
 The container only sees files mounted into it. Mount your project at `/work`:
