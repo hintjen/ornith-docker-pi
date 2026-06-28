@@ -8,13 +8,14 @@ Run all commands from the **repo root**. For the bare-metal (no-Docker) path, se
 [baremetal-setup.md](baremetal-setup.md).
 
 ```
-docker-compose.yml            # build-from-source image + GPU + ./models volume
+docker-compose.yml            # image + GPU + ./models (ro) + ./pi-sessions volumes
 docker/
 ├── Dockerfile.source         # multi-stage: compile llama.cpp (CUDA) + install Node/Pi
 └── container/
     ├── serve.sh              # in-container llama-server launcher (CMD)
     └── pi-ornith             # in-container Pi launcher
 config/pi-models.json         # Pi model config, baked to /root/.pi/agent/models.json
+scripts/pi-remote             # run Pi from ANOTHER machine against this server
 ```
 
 ---
@@ -61,7 +62,9 @@ Or without compose:
 ```bash
 docker build -f docker/Dockerfile.source -t ornith:src .
 docker run -d --name ornith --gpus all -p 8090:8090 \
-  -v "$PWD/models:/models:ro" ornith:src
+  -v "$PWD/models:/models:ro" \
+  -v "$PWD/pi-sessions:/root/.pi/agent/sessions" \
+  ornith:src
 # override pins:  --build-arg LLAMA_COMMIT=<sha>  --build-arg CUDA_ARCH=86  --build-arg PI_VERSION=0.80.2
 ```
 
@@ -89,6 +92,24 @@ The **host** `pi-ornith` works too — its `~/.pi/agent/models.json` also points
 
 Ornith is a *reasoning* model: chain-of-thought goes to the API `reasoning_content` field, the
 answer to `content`. Give generous `max_tokens` or `content` comes back empty.
+
+**Resume sessions.** Pi saves sessions in `~/.pi/agent/sessions/` *bucketed by working
+directory*. The compose file mounts `./pi-sessions` there so they survive `down`/rebuilds
+(without that volume they live in the container's writable layer and vanish on recreate). Resume
+with the same cwd you started in:
+```bash
+docker exec -it ornith pi-ornith --continue        # most recent
+docker exec -it ornith pi-ornith --resume          # pick one
+```
+
+**Concurrent clients.** The server handles one request at a time by default; set
+`ORNITH_PARALLEL>1` for simultaneous Pi sessions (see §5 — `ORNITH_CTX` splits across slots).
+
+**From another machine.** The server listens on `0.0.0.0:8090`, so a remote box needs only
+Node + Pi (no model/GPU): `./scripts/30-install-node-pi.sh` then `./scripts/pi-remote <host>`.
+The endpoint is **unauthenticated** — keep it on a trusted network or tunnel:
+`ssh -N -L 8090:localhost:8090 user@host` then `./scripts/pi-remote localhost`. See the README
+"Connect from another machine" section.
 
 ---
 
@@ -137,7 +158,8 @@ docker exec ornith nvidia-smi --query-gpu=name,memory.used --format=csv,noheader
 | `/opt/ornith/serve.sh` | env-driven `llama-server` launcher (CMD) |
 | `/opt/ornith/pi-ornith` | Pi launcher |
 | `/root/.pi/agent/models.json` | Pi model config (`ornith` 64K + `ornith-128k`) |
-| `/models/…Q4_K_M.gguf` | **volume mount** from host |
+| `/root/.pi/agent/sessions/` | chat history — **volume mount** (`./pi-sessions`) so resume survives recreate |
+| `/models/…Q4_K_M.gguf` | **volume mount** from host (read-only) |
 
 ---
 
@@ -152,6 +174,11 @@ docker exec ornith nvidia-smi --query-gpu=name,memory.used --format=csv,noheader
   Stop the other (`docker stop ornith`) before starting a second.
 - **Port 8090 in use** → stop the host server (`pkill -f 'llama-server.*--alias ornith'`) or
   publish elsewhere (`-p 8091:8090`).
+- **`--resume` finds no sessions** → either the `./pi-sessions` volume isn't mounted (history was
+  in the ephemeral layer and got wiped on recreate), or you're resuming from a different cwd than
+  you started in. Pi buckets sessions by working directory.
+- **`pi-remote` can't reach the server** → check the host's firewall allows `:8090`, the server is
+  up (`curl http://<host>:8090/health`), and the port is published; or use the SSH tunnel.
 - **Dockerfile inline comments** → not allowed on instruction lines (`ARG x=1 # note` fails);
   put comments on their own line.
 
