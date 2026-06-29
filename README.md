@@ -113,8 +113,9 @@ ssh -N -L 8090:localhost:8090 user@gpu-box   # then: ./scripts/pi-remote localho
 │   └── pi-models.json            # Pi model config (ornith 64K + ornith-128k)
 └── docs/
     ├── docker-quickstart.md      # start/stop/daily Docker ops
+    ├── docker-setup.md           # detailed Docker writeup (build internals)
     ├── baremetal-setup.md        # detailed as-built build + benchmark writeup
-    └── docker-setup.md           # detailed Docker writeup (build internals)
+    └── PI_SYSTEM_PROMPT.md       # Pi's base system prompt: where it lives, how to override
 ```
 
 `models/` and `build/` are created by the scripts and git-ignored.
