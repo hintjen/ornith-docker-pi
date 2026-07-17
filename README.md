@@ -64,7 +64,7 @@ Requires NVIDIA driver + **CUDA toolkit (nvcc)**.
 ./scripts/pi-ornith                       # Pi agent (--128k for 128K)
 ```
 
-## Connect from another machine (remote server)
+## Using Ornith from a remote host
 
 The Ornith server already listens on `0.0.0.0:8090`, so Pi can run on a **different box** with
 no model, GPU, or llama.cpp build — just Node + Pi:
@@ -86,6 +86,39 @@ so keep it on a trusted network or tunnel over SSH:
 ```bash
 ssh -N -L 8090:localhost:8090 user@gpu-box   # then: ./scripts/pi-remote localhost
 ```
+
+Sanity-check the connection at any point without touching Pi:
+
+```bash
+curl -sS http://gpu-box:8090/health
+curl -sS http://gpu-box:8090/v1/chat/completions -d '{"messages":[{"role":"user","content":"hi"}]}'
+```
+
+### ARM64 / aarch64 clients (Apple Silicon, Raspberry Pi, AWS Graviton, etc.)
+
+`scripts/30-install-node-pi.sh` unconditionally downloads the **`linux-x64`** Node tarball. On an
+`aarch64` client that binary can't execute at all — running `pi` fails immediately with something
+like:
+
+```
+build/node/bin/node: 1: ELF: not found
+build/node/bin/node: 2: Syntax error: ")" unexpected
+```
+
+(the shell tries to interpret the foreign-arch ELF binary as a script, since exec fails silently
+under `env`). This has nothing to do with Ornith or Pi themselves — the downloaded `node` binary is
+simply the wrong architecture. Workaround until the installer detects arch itself: point the
+isolated prefix's `node` at any working arm64 Node already on the machine (system package, nvm,
+etc.) instead of the broken download — the npm-installed `pi` package is pure JS, so it runs fine
+under any correctly-arched Node:
+
+```bash
+rm build/node/bin/node
+ln -s "$(command -v node)" build/node/bin/node   # or the full path to an arm64 node binary
+build/node/bin/pi --version                       # should now print the installed version
+```
+
+Re-run `./scripts/pi-remote <host>` after the fix — no need to redo the npm install.
 
 ---
 
