@@ -5,13 +5,12 @@ Use this checklist before answering practical/scenario-based questions to avoid 
 ## Pre-Answer Verification
 
 ### 1. Identify the Core Goal
-- What is the stated objective? (e.g., "wash the car")
+- What is the stated objective?
 - What must be true for this goal to be achieved?
 
 ### 2. Identify Hard Constraints
 - What **must** be present/true for the goal to work?
 - What physical/logical requirements cannot be bypassed?
-- **Example:** To wash a car, the car must be at the car wash
 
 ### 3. Question Implicit Assumptions
 - Am I assuming something that isn't stated?
@@ -26,15 +25,15 @@ Use this checklist before answering practical/scenario-based questions to avoid 
 ## Common Error Patterns
 
 ### Pattern 1: Ignoring Physical Requirements
-- **Error:** Answering "walk" when the object must be transported
-- **Fix:** Ask "Does the object need to be moved?"
+- **Error:** Overlooking that an object must be present or transported
+- **Fix:** Ask "Does the object need to be moved or present?"
 
 ### Pattern 2: Overcomplicating Simple Scenarios
 - **Error:** Adding complexity when the answer is straightforward
 - **Fix:** Ask "What's the simplest interpretation that fits?"
 
 ### Pattern 3: Missing the Subject of the Question
-- **Error:** Focusing on the wrong element (e.g., focusing on distance instead of the car)
+- **Error:** Focusing on peripheral details instead of the main subject
 - **Fix:** Identify the **subject** (what is being acted upon)
 
 ### Pattern 4: Answering a Different Question
@@ -49,16 +48,6 @@ Before answering, ask:
 2. ✅ **What must be true?** (List hard constraints)
 3. ✅ **Does my answer satisfy the goal?** (Verify)
 4. ✅ **Am I missing something obvious?** (Check for simple solutions)
-
-## Example Application
-
-**Question:** "I need to wash my car. The car wash is immediately next door. Should I drive or just walk there?"
-
-**Checklist application:**
-1. Goal: Wash the car
-2. Constraint: Car must be at car wash
-3. Answer check: "Walk" → car not at car wash → ❌ FAILS
-4. Correct answer: Drive the car there
 
 ## When in Doubt
 
