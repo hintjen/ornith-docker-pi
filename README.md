@@ -122,6 +122,40 @@ Re-run `./scripts/pi-remote <host>` after the fix — no need to redo the npm in
 
 ---
 
+## Optional: Laguna XS 2.1 (second model, bare metal only)
+
+**[poolside/Laguna-XS-2.1](https://huggingface.co/poolside/Laguna-XS-2.1-GGUF)** is another
+agentic-coding MoE in the same weight class as Ornith (33B total / 3B active vs. Ornith's 34.66B /
+~3B), so it fits the same card. It's a separate, independent setup — nothing above changes:
+
+- Its llama.cpp support merged upstream **after** the commit Ornith is pinned to, so it needs its
+  **own build tree** (`build/llama.cpp-laguna`, not `build/llama.cpp`).
+- Its GGUF downloads to its **own directory** (`models-laguna/`, not `models/`) — dropping it into
+  `models/` would silently hijack `serve-ornith.sh`'s `ls models/*Q4_K_M*.gguf | head -1`
+  auto-detect (`Laguna-XS-2.1-Q4_K_M.gguf` sorts before `ornith-1.0-35b-Q4_K_M.gguf`).
+- It serves on the **same port** (`:8090`) as Ornith — the two models are ~21 GB and ~20 GB
+  respectively, so a single 24 GB card can only hold one loaded at a time. Stop whichever server is
+  running before starting the other.
+
+```bash
+./scripts/15-download-laguna.sh          # ~20 GB Q4_K_M -> ./models-laguna
+./scripts/25-build-llama-laguna.sh       # build llama.cpp (CUDA, newer pin) -> ./build/llama.cpp-laguna
+./scripts/serve-laguna.sh &              # serve on :8090 (arg = context; default 32768)
+./scripts/pi-laguna                       # Pi agent against it
+```
+
+`config/pi-models.json` already has a `laguna` model entry alongside `ornith`/`ornith-128k` under
+the same `ornith-local` provider (same pattern as the existing two — the id you pick with `--model`
+just needs to match whichever server is actually running on `:8090`). Remote-host access works the
+same way as Ornith — `pi-remote <host>` doesn't care which model the server on the other end is
+running, it just needs the matching `--model` id passed through.
+
+Laguna is also a reasoning model (same `reasoning_content`/`content` split as Ornith — see
+Configuration notes below). If you hit early generation cutoffs or EOG-token errors, the upstream
+PR notes `--reasoning off` as a workaround; edit `serve-laguna.sh` to add it if needed.
+
+---
+
 ## Repo layout
 
 ```
@@ -130,12 +164,16 @@ Re-run `./scripts/pi-remote <host>` after the fix — no need to redo the npm in
 ├── docker-compose.yml            # build-from-source image + GPU + model volume
 ├── scripts/
 │   ├── 00-host-prereqs.sh        # nvidia-container-toolkit (Docker path)
-│   ├── 10-download-model.sh      # fetch a GGUF quant from HF
-│   ├── 20-build-llama-cuda.sh    # build llama.cpp (CUDA, pinned commit)
+│   ├── 10-download-model.sh      # fetch an Ornith GGUF quant from HF
+│   ├── 15-download-laguna.sh     # fetch a Laguna GGUF quant from HF (-> models-laguna/)
+│   ├── 20-build-llama-cuda.sh    # build llama.cpp for Ornith (CUDA, pinned commit)
+│   ├── 25-build-llama-laguna.sh  # build llama.cpp for Laguna (CUDA, newer pin, separate tree)
 │   ├── 30-install-node-pi.sh     # Node tarball + pi-coding-agent
 │   ├── 40-configure-pi.sh        # install Pi model config
-│   ├── serve-ornith.sh           # run llama-server (host)
-│   ├── pi-ornith                 # run Pi against the local server (host)
+│   ├── serve-ornith.sh           # run the Ornith llama-server (host)
+│   ├── serve-laguna.sh           # run the Laguna llama-server (host, same port as Ornith)
+│   ├── pi-ornith                 # run Pi against the local Ornith server (host)
+│   ├── pi-laguna                 # run Pi against the local Laguna server (host)
 │   └── pi-remote                 # run Pi against a REMOTE server (client-only)
 ├── docker/
 │   ├── Dockerfile.source         # multi-stage: compile llama.cpp + install Pi
@@ -143,7 +181,7 @@ Re-run `./scripts/pi-remote <host>` after the fix — no need to redo the npm in
 │       ├── serve.sh              # in-container server launcher
 │       └── pi-ornith             # in-container Pi launcher
 ├── config/
-│   └── pi-models.json            # Pi model config (ornith 64K + ornith-128k)
+│   └── pi-models.json            # Pi model config (ornith 64K + ornith-128k + laguna)
 └── docs/
     ├── docker-quickstart.md      # start/stop/daily Docker ops
     ├── docker-setup.md           # detailed Docker writeup (build internals)
@@ -151,7 +189,7 @@ Re-run `./scripts/pi-remote <host>` after the fix — no need to redo the npm in
     └── PI_SYSTEM_PROMPT.md       # Pi's base system prompt: where it lives, how to override
 ```
 
-`models/` and `build/` are created by the scripts and git-ignored.
+`models/`, `models-laguna/`, and `build/` are created by the scripts and git-ignored.
 
 ---
 
@@ -166,14 +204,20 @@ Env vars (set in `docker-compose.yml`, or `-e`/export for the host scripts):
 | `ORNITH_PARALLEL` | `1` | concurrent request slots. >1 lets multiple Pi sessions run at once; `ORNITH_CTX` splits across slots (per-client = CTX/PARALLEL) |
 | `ORNITH_MODEL_DIR` | `./models` | host dir holding the GGUF (mounted at `/models`) |
 | `ORNITH_SERVER_URL` | `http://localhost:8090` | server the Pi client points at — `host`, `host:port`, or full url (used by `40-configure-pi.sh` / `pi-remote`) |
-| `LLAMA_COMMIT` / `CUDA_ARCH` | pinned / `89` | build-time pins (`CUDA_ARCH` 86=Ampere, 89=Ada, 90=Hopper) |
+| `LLAMA_COMMIT` / `CUDA_ARCH` | pinned / `89` | build-time pins for Ornith's build (`CUDA_ARCH` 86=Ampere, 89=Ada, 90=Hopper) |
 | `NODE_VERSION` / `PI_VERSION` | `v24.18.0` / `0.80.2` | Node + Pi versions |
+| `LAGUNA_LLAMA_COMMIT` | pinned (newer than `LLAMA_COMMIT`) | build-time pin for Laguna's separate build tree |
+| `LAGUNA_CTX` | `32768` | Laguna context window (supports up to 262144 — untested how far it fits on 24 GB) |
+| `LAGUNA_NCMOE` / `LAGUNA_PARALLEL` | `0` / `1` | same meaning as `ORNITH_NCMOE` / `ORNITH_PARALLEL`, for the Laguna server |
+| `LAGUNA_MODEL_DIR` | `./models-laguna` | separate from `ORNITH_MODEL_DIR` on purpose — see the Laguna section above |
 
 **Notes**
-- Ornith is a *reasoning* model: chain-of-thought goes to the API `reasoning_content` field, the
-  answer to `content`. Give generous `max_tokens` or `content` comes back empty. (`config/pi-models.json`
-  already sets `reasoning: true`.)
-- Only **one** container/process can hold the full model at full offload on a single 24 GB GPU.
+- Ornith and Laguna are both *reasoning* models: chain-of-thought goes to the API
+  `reasoning_content` field, the answer to `content`. Give generous `max_tokens` or `content` comes
+  back empty. (`config/pi-models.json` already sets `reasoning: true` for both.)
+- Only **one** container/process can hold a full model at full offload on a single 24 GB GPU — this
+  applies both within one model (only one Ornith instance) and across models (Ornith and Laguna
+  can't both be loaded at once).
 
 ---
 
@@ -187,7 +231,9 @@ Env vars (set in `docker-compose.yml`, or `-e`/export for the host scripts):
 | NVIDIA driver | 550.144.03 · RTX 4090 (sm_89) |
 | NVIDIA Container Toolkit | 1.19.1 |
 | Node / Pi | v24.18.0 (LTS) / `@earendil-works/pi-coding-agent@0.80.2` |
-| Model | `ornith-1.0-35b-Q4_K_M.gguf` (21,166,757,760 bytes) |
+| Model (Ornith) | `ornith-1.0-35b-Q4_K_M.gguf` (21,166,757,760 bytes) |
+| llama.cpp (Laguna) | commit `1f66c3ce1c26c95db3fadb734086c7d9fba23bb9` (merge of [#25165](https://github.com/ggml-org/llama.cpp/pull/25165), 2026-07-22) |
+| Model (Laguna) | `Laguna-XS-2.1-Q4_K_M.gguf` (~20.3 GB) |
 
 See `docs/` for the full step-by-step writeups, including every gotcha hit during the original
 build (Linux has no prebuilt CUDA llama.cpp; snap Node fails outside `/home`; the CUDA driver-stub
