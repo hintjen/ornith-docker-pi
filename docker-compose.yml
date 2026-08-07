@@ -25,6 +25,7 @@ services:
     environment:
       ORNITH_CTX: 65536      # 131072 for 128K; 262144 needs ORNITH_NCMOE>0
       ORNITH_NCMOE: 0        # 0 = whole model on GPU (fastest)
+      ORNITH_PARALLEL: 1     # concurrent Pi clients; CTX splits across slots (per-client = CTX/PARALLEL)
     working_dir: /code
     restart: unless-stopped
     deploy:
