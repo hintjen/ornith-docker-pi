@@ -5,9 +5,21 @@
 # of a 24GB card, so only ONE of the two servers can run at a time. Stop whichever
 # is running before starting the other.
 #
-#   ./scripts/serve-laguna.sh [CTX]      # CTX default 32768
+#   ./scripts/serve-laguna.sh [CTX]      # CTX default 65536 (~22GB, 1.5GB headroom on a 4090)
 #
 # Env overrides: LAGUNA_BIN_DIR, LAGUNA_MODEL, LAGUNA_CTX, LAGUNA_NCMOE, LAGUNA_PARALLEL
+#
+# Context/VRAM (Q4_K_M, RTX 4090, measured): 32768 ctx -> 21.3GB used, 2.8GB free.
+# 65536 -> 22.7GB used, 1.5GB free (the default below). 98304 -> 24.0GB used, only
+# 234MB free — loads but too tight for real inference (compute buffers scale with
+# request size; risks an OOM crash mid-session). 131072 -> OOM at load time, doesn't
+# fit at all. Don't go above 65536 without also raising --n-cpu-moe to offload some
+# experts to CPU and free VRAM.
+#
+# Do NOT add --swa-full: it forces a full-context KV cache on every layer instead of
+# the memory-efficient sliding-window cache Laguna uses on 30 of its 40 layers, and
+# OOMs even at 32768 ctx. The upstream PR notes call it "effectively mandatory for
+# prefix reuse" — that's a performance nicety we're trading away to fit on 24GB.
 #
 # Troubleshooting (from the upstream PR notes):
 #   - If generation stops early / EOG-token errors: try adding --reasoning off
@@ -19,7 +31,7 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
 BIN="${LAGUNA_BIN_DIR:-$HERE/build/llama.cpp-laguna/build/bin}"
 MODEL="${LAGUNA_MODEL:-$(ls "$HERE"/models-laguna/*Q4_K_M*.gguf 2>/dev/null | head -1)}"
-CTX="${1:-${LAGUNA_CTX:-32768}}"           # Laguna supports up to 262144; start conservative
+CTX="${1:-${LAGUNA_CTX:-65536}}"           # see VRAM table above before raising this
 NCMOE="${LAGUNA_NCMOE:-0}"                 # 0 = whole model on GPU (fastest)
 NPAR="${LAGUNA_PARALLEL:-1}"               # concurrent slots; CTX is SPLIT across them
 
@@ -33,7 +45,6 @@ exec "$BIN/llama-server" \
   -ngl 99 \
   --n-cpu-moe "$NCMOE" \
   -fa on \
-  --swa-full \
   -c "$CTX" \
   --parallel "$NPAR" \
   --jinja \

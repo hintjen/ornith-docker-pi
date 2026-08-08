@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Launch the Pi coding agent against the local Laguna server; auto-starts it if needed.
 #
-#   ./scripts/pi-laguna               # interactive, 32K ctx
+#   ./scripts/pi-laguna               # interactive, 64K ctx
 #   ./scripts/pi-laguna -p "..."      # headless; any pi args pass through
 #
 # Same GPU/port as Ornith — if serve-ornith.sh is currently running, stop it first
@@ -11,7 +11,7 @@
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="${ORNITH_NODE_DIR:-$HERE/build/node}/bin:$PATH"
 
-CTX=32768
+CTX=65536
 MODEL=ornith-local/laguna
 
 if ! curl -sf http://localhost:8090/health >/dev/null 2>&1; then

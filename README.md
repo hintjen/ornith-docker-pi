@@ -136,11 +136,19 @@ agentic-coding MoE in the same weight class as Ornith (33B total / 3B active vs.
 - It serves on the **same port** (`:8090`) as Ornith — the two models are ~21 GB and ~20 GB
   respectively, so a single 24 GB card can only hold one loaded at a time. Stop whichever server is
   running before starting the other.
+- **Do not pass `--swa-full`.** The upstream PR notes call it "effectively mandatory for prefix
+  reuse," but it forces a full-context KV cache on every layer instead of the memory-efficient
+  sliding-window cache Laguna uses on 30 of its 40 layers — measured, it OOMs even at 32768 ctx.
+  Without it, context/VRAM on a 4090 (Q4_K_M) measures as: 32768 ctx → 21.3GB used, 2.8GB free ·
+  65536 (the default) → 22.7GB used, 1.5GB free · 98304 → 24.0GB used, only 234MB free (loads, but
+  too tight for real inference — compute buffers scale with request size) · 131072 → OOM at load,
+  doesn't fit at all. Raise `LAGUNA_NCMOE` above 0 to trade GPU experts for CPU and unlock more
+  context if you need it.
 
 ```bash
 ./scripts/15-download-laguna.sh          # ~20 GB Q4_K_M -> ./models-laguna
 ./scripts/25-build-llama-laguna.sh       # build llama.cpp (CUDA, newer pin) -> ./build/llama.cpp-laguna
-./scripts/serve-laguna.sh &              # serve on :8090 (arg = context; default 32768)
+./scripts/serve-laguna.sh &              # serve on :8090 (arg = context; default 65536)
 ./scripts/pi-laguna                       # Pi agent against it
 ```
 
