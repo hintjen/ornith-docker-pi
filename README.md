@@ -194,7 +194,8 @@ PR notes `--reasoning off` as a workaround; edit `serve-laguna.sh` to add it if 
     ├── docker-quickstart.md      # start/stop/daily Docker ops
     ├── docker-setup.md           # detailed Docker writeup (build internals)
     ├── baremetal-setup.md        # detailed as-built build + benchmark writeup
-    └── PI_SYSTEM_PROMPT.md       # Pi's base system prompt: where it lives, how to override
+    ├── PI_SYSTEM_PROMPT.md       # Pi's base system prompt: where it lives, how to override
+    └── local-model-eval-strategy.md  # session handoff: current state, gotchas, open eval questions
 ```
 
 `models/`, `models-laguna/`, and `build/` are created by the scripts and git-ignored.
